@@ -23,7 +23,6 @@ param keyVaultName string = 'intent-system-00-vault'
 @description('The Azure region where resources will be created.')
 param location string = resourceGroup().location
 
-// Azure Storage Account
 resource storageAccount 'Microsoft.Storage/storageAccounts@2021-09-01' = {
   name: storageAccountName
   location: location
@@ -36,7 +35,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2021-09-01' = {
   }
 }
 
-// Azure SQL Server
 resource sqlServer 'Microsoft.Sql/servers@2022-05-01-preview' = {
   name: sqlServerName
   location: location
@@ -46,7 +44,6 @@ resource sqlServer 'Microsoft.Sql/servers@2022-05-01-preview' = {
   }
 }
 
-// Firewall rule to allow Azure services to access the SQL server
 resource allowAzureIPs 'Microsoft.Sql/servers/firewallRules@2022-05-01-preview' = {
   name: 'AllowAllAzureIPs'
   parent: sqlServer
@@ -56,7 +53,6 @@ resource allowAzureIPs 'Microsoft.Sql/servers/firewallRules@2022-05-01-preview' 
   }
 }
 
-// Azure SQL Database
 resource sqlDatabase 'Microsoft.Sql/servers/databases@2022-05-01-preview' = {
   name: sqlDatabaseName
   parent: sqlServer
@@ -64,7 +60,6 @@ resource sqlDatabase 'Microsoft.Sql/servers/databases@2022-05-01-preview' = {
   properties: {
     collation: 'SQL_Latin1_General_CP1_CI_AS'
     maxSizeBytes: 2147483648 // 2 GB
-    sampleName: 'AdventureWorksLT' // Optional: Remove if you don't want the sample database
   }
 }
 
@@ -72,12 +67,11 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
   name: 'intent-system-00-service-plan'
   location: resourceGroup().location
   sku: {
-    name: 'Y1' // Consumption Plan (scale-to-zero)
+    name: 'Y1'
     tier: 'Dynamic'
   }
 }
 
-// Azure Key Vault
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
   name: keyVaultName
   location: location
@@ -104,7 +98,6 @@ resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
   }
 }
 
-// Store Storage Account Connection String in Key Vault
 resource storageConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
   name: '${keyVault.name}/storageConnectionString'
   properties: {
@@ -116,7 +109,6 @@ resource storageConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2022-0
   ]
 }
 
-// Store SQL Admin Password in Key Vault
 resource sqlAdminPasswordSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
   name: '${keyVault.name}/sqlAdminPassword'
   properties: {
