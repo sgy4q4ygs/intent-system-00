@@ -1,0 +1,59 @@
+name: Deploy Remaining Shared Azure Infrastructure
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy_azure_infrastructure:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_NAME: intent-system-00
+      LOCATION: centralus
+      RESOURCE_GROUP_NAME: intent-system-00-rg
+      IDENTITY_NAME: intent-system-00-id
+    steps:
+      - name: Azure login
+        uses: Azure/login@v2.2.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          auth-type: SERVICE_PRINCIPAL
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy functional resources shared by FRs
+        uses: Azure/cli@v2.1.0
+        env:
+          DEPLOYMENT_NAME: shared-functional-resources
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az deployment group create --name "$PROJECT_NAME-$DEPLOYMENT_NAME-deployment" \
+              --resource-group "$RESOURCE_GROUP_NAME" \
+              --template-file "$GITHUB_WORKSPACE/azure-$DEPLOYMENT_NAME.bicep" \
+              --parameters managedIdentityName="$IDENTITY_NAME" \
+              sqlAdminPassword="${{ secrets.SQLADMIN_PASSWORD }}"
+
+      - name: Deploy automation account
+        uses: Azure/cli@v2.1.0
+        env:
+          DEPLOYMENT_NAME: aa
+          RUNBOOK_NAME: follow-budget
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az deployment group create --name "$PROJECT_NAME-$DEPLOYMENT_NAME-deployment" \
+              --resource-group "$RESOURCE_GROUP_NAME" \
+              --template-file "$GITHUB_WORKSPACE/azure-$DEPLOYMENT_NAME.bicep" \
+            az extension add --name automation
+#            az automation runbook replace-content \
+#              --resource-group "$RESOURCE_GROUP_NAME" \
+#              --automation-account-name "$PROJECT_NAME-$DEPLOYMENT_NAME" \
+#              --name "$RUNBOOK_NAME" \
+#              --content "$GITHUB_WORKSPACE/$RUNBOOK_NAME.ps1"
