@@ -1,0 +1,8 @@
+[
+  {
+    "name": "follow-budget",
+    "type": "PowerShell",
+    "description": "Automatically stops specific resources when a budget is exceeded.",
+    "schedule": "OnBudgetExceed"
+  }
+]

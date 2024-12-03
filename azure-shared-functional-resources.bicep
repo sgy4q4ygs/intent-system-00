@@ -1,22 +1,48 @@
 param project string = 'intent-system-00'
 
 param location string = resourceGroup().location
-param keyVaultName string = '${project}-vault'
+
 param storageAccountName string = '${join(split(project, '-'), '')}storage'
 param sqlServerName string = '${project}-sqlserver'
+param keyVaultName string = '${project}-kv'
 
-param identityPrincipalId string
+param managedIdentityName string
 @secure()
 param sqlAdminPassword string
 param sqlAdminLogin string = 'adminuser'
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2024-04-01' = {
-  name: '${project}-service-plan'
-  location: resourceGroup().location
+  name: '${project}-asp'
+  location: location
   sku: {
     name: 'Y1'
     tier: 'Dynamic'
   }
+}
+
+resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
+  name: storageAccountName
+  location: location
+  sku: {
+    name: 'Standard_LRS'
+  }
+  kind: 'StorageV2'
+  properties: {
+    accessTier: 'Cool'
+  }
+}
+
+resource sqlServer 'Microsoft.Sql/servers@2023-05-01-preview' = {
+  name: sqlServerName
+  location: location
+  properties: {
+    administratorLogin: sqlAdminLogin
+    administratorLoginPassword: sqlAdminPassword
+  }
+}
+
+resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
+  name: managedIdentityName
 }
 
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
@@ -31,7 +57,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     accessPolicies: [
       {
         tenantId: subscription().tenantId
-        objectId: identityPrincipalId
+        objectId: managedIdentity.properties.principalId
         permissions: {
           secrets: [
             'get'
@@ -42,27 +68,6 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
         }
       }
     ]
-  }
-}
-
-resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
-  name: storageAccountName
-  location: location
-  sku: {
-    name: 'Standard_LRS'
-  }
-  kind: 'StorageV2'
-  properties: {
-    accessTier: 'Hot'
-  }
-}
-
-resource sqlServer 'Microsoft.Sql/servers@2023-05-01-preview' = {
-  name: sqlServerName
-  location: location
-  properties: {
-    administratorLogin: sqlAdminLogin
-    administratorLoginPassword: sqlAdminPassword
   }
 }
 
